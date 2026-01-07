@@ -7,7 +7,7 @@
 
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 
 /**
  * Creates the Hono app with the given configuration
@@ -27,7 +27,7 @@ function createApp(config) {
 	}
 
 	// Create Redis client
-	const redis = new Redis.default(redisUrl);
+	const redis = new Redis(redisUrl);
 
 	// Handle Redis connection errors
 	redis.on("error", (/** @type {Error} */ err) => {
