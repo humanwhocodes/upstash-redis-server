@@ -31,6 +31,8 @@ export default [
 				setTimeout: false,
 				AbortSignal: false,
 				AbortController: false,
+				Request: false,
+				Response: false,
 			},
 		},
 	},
