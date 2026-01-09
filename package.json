@@ -1,11 +1,14 @@
 {
-  "name": "@humanwhocodes/replace-me",
+  "name": "@humanwhocodes/upstash-redis-server",
   "version": "0.0.0",
-  "description": "Replace me",
+  "description": "An HTTP server that emulates the Upstash Redis API to interact with an existing Redis database",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "upstash-redis-server": "./dist/server.js"
+  },
   "exports": {
     "import": {
       "types": "./dist/index.d.ts",
@@ -44,15 +47,19 @@
     "prepublishOnly": "npm run build",
     "pretest": "npm run build",
     "test": "mocha tests/**/*.{js,mjs} --exit --forbid-only",
-    "test:jsr": "npx jsr@latest publish --dry-run",
     "test:attw": "attw --pack --profile esm-only"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/humanwhocodes/replace-me.git"
+    "url": "git+https://github.com/humanwhocodes/upstash-redis-server.git"
   },
   "keywords": [
-
+    "upstash",
+    "redis",
+    "server",
+    "http",
+    "rest",
+    "api"
   ],
   "author": "Nicholas C. Zaks",
   "license": "Apache-2.0",
@@ -69,5 +76,8 @@
     "yorkie": "2.0.0"
   },
   "dependencies": {
+    "@hono/node-server": "^1.19.7",
+    "hono": "^4.6.14",
+    "ioredis": "^5.4.2"
   }
 }
