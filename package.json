@@ -1,6 +1,6 @@
 {
   "name": "@humanwhocodes/upstash-redis-server",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "An HTTP server that emulates the Upstash Redis API to interact with an existing Redis database",
   "type": "module",
   "main": "dist/index.js",
