@@ -112,6 +112,36 @@ const app = createApp({
 // Use with your preferred Node.js server adapter
 ```
 
+## Use with Docker
+
+The easiest way to run the proxy server is with Docker. You can effectively mimic and Upstash Redis server by using a Redis container alongside this package:
+
+```yaml
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    expose:
+      - "6379"
+  
+  proxy:
+    image: node:22-slim
+    container_name: redis-proxy
+    working_dir: /app
+    ports:
+      - "3030:3030"
+    environment:
+      - URS_TOKEN=my-secret-token
+      - PORT=3030
+      - REDIS_URL=redis://redis:6379
+    command: npx @humanwhocodes/upstash-redis-server@1
+    depends_on:
+      - redis
+
+volumes:
+  redis-insight-data:
+```
+
 ## License
 
 Copyright 2025 Nicholas C. Zakas
