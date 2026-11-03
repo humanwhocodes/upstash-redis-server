@@ -4,6 +4,7 @@
  */
 
 import assert from "node:assert";
+import { Redis } from "ioredis";
 import { createApp } from "../src/app.js";
 
 describe("createApp", () => {
@@ -117,6 +118,55 @@ describe("createApp", () => {
 		});
 	});
 
+	describe("POST / - Base64 encoding", () => {
+		it("should encode strings recursively when requested", async () => {
+			const originalCall = Redis.prototype.call;
+			Redis.prototype.call = async () => ["20", ["hello", "OK", 42, null]];
+
+			try {
+				const app = createApp({ token: "test-token" });
+				const req = new Request("http://localhost/", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: "Bearer " + "test-token",
+						"Upstash-Encoding": "base64",
+					},
+					body: JSON.stringify(["GET", "key"]),
+				});
+
+				const res = await app.fetch(req);
+				assert.deepStrictEqual(await res.json(), {
+					result: ["MjA=", ["aGVsbG8=", "OK", 42, null]],
+				});
+			} finally {
+				Redis.prototype.call = originalCall;
+			}
+		});
+
+		it("should leave strings unchanged when encoding is not requested", async () => {
+			const originalCall = Redis.prototype.call;
+			Redis.prototype.call = async () => "20";
+
+			try {
+				const app = createApp({ token: "test-token" });
+				const req = new Request("http://localhost/", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: "Bearer " + "test-token",
+					},
+					body: JSON.stringify(["GET", "key"]),
+				});
+
+				const res = await app.fetch(req);
+				assert.deepStrictEqual(await res.json(), { result: "20" });
+			} finally {
+				Redis.prototype.call = originalCall;
+			}
+		});
+	});
+
 	describe("POST /pipeline - Pipeline validation", () => {
 		it("should reject invalid JSON body", async () => {
 			const app = createApp({ token: "test-token" });
@@ -208,5 +258,59 @@ describe("createApp", () => {
 			assert.strictEqual(json.error, "Command at index 1 cannot be empty");
 		});
 	});
-});
 
+	describe("POST /pipeline - Base64 encoding", () => {
+		it("should encode successful results and preserve errors", async () => {
+			const originalPipeline = Redis.prototype.pipeline;
+			Redis.prototype.pipeline = () => ({
+				call() {
+					return this;
+				},
+				async exec() {
+					return [
+						[null, ["20", "OK", ["hello"]]],
+						[new Error("failure"), null],
+						[null, 42],
+					];
+				},
+			});
+
+			try {
+				const app = createApp({ token: "test-token" });
+				const req = new Request("http://localhost/pipeline", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: "Bearer " + "test-token",
+						"Upstash-Encoding": "base64",
+					},
+					body: JSON.stringify([["GET", "key"], ["GET", "other"]]),
+				});
+
+				const res = await app.fetch(req);
+				assert.deepStrictEqual(await res.json(), [
+					{ result: ["MjA=", "OK", ["aGVsbG8="]] },
+					{ error: "failure" },
+					{ result: 42 },
+				]);
+
+				const plainReq = new Request("http://localhost/pipeline", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: "Bearer " + "test-token",
+					},
+					body: JSON.stringify([["GET", "key"], ["GET", "other"]]),
+				});
+				const plainRes = await app.fetch(plainReq);
+				assert.deepStrictEqual(await plainRes.json(), [
+					{ result: ["20", "OK", ["hello"]] },
+					{ error: "failure" },
+					{ result: 42 },
+				]);
+			} finally {
+				Redis.prototype.pipeline = originalPipeline;
+			}
+		});
+	});
+});
