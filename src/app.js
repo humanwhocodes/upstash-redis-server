@@ -7,7 +7,25 @@
 
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
+import { Buffer } from "node:buffer";
 import { Redis } from "ioredis";
+
+/**
+ * Encodes string values in a Redis response for Upstash clients.
+ * @param {any} value - The Redis response value
+ * @returns {any} The response with strings encoded as base64
+ */
+function encodeStrings(value) {
+	if (typeof value === "string") {
+		return value === "OK" ? value : Buffer.from(value, "utf8").toString("base64");
+	}
+
+	if (Array.isArray(value)) {
+		return value.map(encodeStrings);
+	}
+
+	return value;
+}
 
 /**
  * Creates the Hono app with the given configuration
@@ -72,7 +90,11 @@ function createApp(config) {
 			const result = await redis.call(body[0], ...body.slice(1));
 			
 			// Return result in Upstash format
-			return c.json({ result });
+			const encodedResult =
+				c.req.header("Upstash-Encoding") === "base64"
+					? encodeStrings(result)
+					: result;
+			return c.json({ result: encodedResult });
 		} catch (error) {
 			const errorMessage =
 				error instanceof Error ? error.message : String(error);
@@ -150,7 +172,12 @@ function createApp(config) {
 				if (error) {
 					return { error: error.message };
 				}
-				return { result };
+				return {
+					result:
+						c.req.header("Upstash-Encoding") === "base64"
+							? encodeStrings(result)
+							: result,
+				};
 			});
 
 			return c.json(response);
